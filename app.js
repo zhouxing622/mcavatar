@@ -198,20 +198,20 @@ async function fetchIceServerCredentials() {
 async function startAvatar() {
     // Validate inputs
     if (!elements.speechKey.value.trim()) {
-        alert('Please enter your Azure Speech key');
-        elements.configSection.open = true;
+        alert('Please enter your Azure Speech key in Settings');
+        elements.settingsModal.classList.add('open');
         return;
     }
     if (!elements.openaiEndpoint.value.trim() || !elements.openaiKey.value.trim()) {
-        alert('Please enter your Azure OpenAI endpoint and key');
-        elements.configSection.open = true;
+        alert('Please enter your Azure OpenAI endpoint and key in Settings');
+        elements.settingsModal.classList.add('open');
         return;
     }
 
     try {
         setConnectionStatus('connecting', 'Connecting...');
         elements.startButton.disabled = true;
-        elements.configSection.open = false;
+        elements.settingsModal.classList.remove('open');
 
         // Create Speech config
         speechConfig = SpeechSDK.SpeechConfig.fromSubscription(
