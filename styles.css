@@ -538,7 +538,16 @@ body {
     color: var(--text-secondary);
     text-transform: uppercase;
     letter-spacing: 0.05em;
+    margin-bottom: 8px;
+}
+
+.config-note {
+    font-size: 0.75rem;
+    color: var(--accent-cyan);
     margin-bottom: 12px;
+    padding: 8px 10px;
+    background: rgba(6, 182, 212, 0.1);
+    border-radius: var(--radius-sm);
 }
 
 .form-group {
