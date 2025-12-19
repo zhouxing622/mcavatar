@@ -252,11 +252,15 @@ async function startAvatar() {
             }]
         });
 
+        // Track if video was received
+        let videoReceived = false;
+        
         // Handle incoming tracks
         peerConnection.ontrack = function(event) {
             console.log('Track received:', event.track.kind);
             
             if (event.track.kind === 'video') {
+                videoReceived = true;
                 elements.videoPlayer.srcObject = event.streams[0];
                 elements.videoPlayer.classList.add('active');
                 elements.placeholder.style.display = 'none';
@@ -265,6 +269,17 @@ async function startAvatar() {
                 elements.audioPlayer.srcObject = event.streams[0];
             }
         };
+        
+        // Check if video is received within 15 seconds
+        setTimeout(() => {
+            if (!videoReceived && peerConnection) {
+                const char = elements.avatarCharacter.value;
+                const style = elements.avatarStyle.value;
+                console.error('No video received for:', char, style);
+                alert(`Avatar "${char}" with "${style}" is not available in your region. Please use Lisa + Casual Sitting.`);
+                cleanup();
+            }
+        }, 15000);
 
         // Handle connection state
         peerConnection.onconnectionstatechange = function() {
@@ -299,10 +314,20 @@ async function startAvatar() {
             console.log('Avatar event:', e.description);
         };
 
-        // Start avatar
-        console.log('Starting avatar...');
-        await avatarSynthesizer.startAvatarAsync(peerConnection);
+        // Start avatar with timeout
+        const character = elements.avatarCharacter.value;
+        const style = elements.avatarStyle.value;
+        console.log(`Starting avatar: ${character} / ${style}...`);
         
+        // Add timeout for avatar start (30 seconds)
+        const startPromise = avatarSynthesizer.startAvatarAsync(peerConnection);
+        const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error(`Avatar "${character}" with style "${style}" failed to start. Try Lisa + Casual Sitting.`)), 30000)
+        );
+        
+        await Promise.race([startPromise, timeoutPromise]);
+        
+        console.log('Avatar started successfully!');
         elements.stopButton.disabled = false;
 
     } catch (error) {
