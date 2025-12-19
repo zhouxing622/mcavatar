@@ -64,7 +64,11 @@ const elements = {
 // Event Listeners
 // ============================================
 elements.startButton.addEventListener('click', startAvatar);
-elements.stopButton.addEventListener('click', stopAvatar);
+elements.stopButton.addEventListener('click', async () => {
+    elements.stopButton.disabled = true;
+    elements.startButton.disabled = true;
+    await stopAvatar();
+});
 elements.pushToTalkBtn.addEventListener('mousedown', startPushToTalk);
 elements.pushToTalkBtn.addEventListener('mouseup', stopPushToTalk);
 elements.pushToTalkBtn.addEventListener('mouseleave', stopPushToTalk);
@@ -338,7 +342,7 @@ async function startAvatar() {
     }
 }
 
-function stopAvatar() {
+async function stopAvatar() {
     console.log('Stopping avatar...');
     
     if (isContinuousMode) {
@@ -346,21 +350,48 @@ function stopAvatar() {
     }
     
     if (speechRecognizer) {
-        speechRecognizer.stopContinuousRecognitionAsync();
-        speechRecognizer.close();
+        try {
+            speechRecognizer.stopContinuousRecognitionAsync();
+            speechRecognizer.close();
+        } catch (e) {
+            console.log('Speech recognizer close error:', e);
+        }
         speechRecognizer = null;
     }
     
     if (avatarSynthesizer) {
-        avatarSynthesizer.close();
+        try {
+            await avatarSynthesizer.stopSpeakingAsync();
+            avatarSynthesizer.close();
+        } catch (e) {
+            console.log('Avatar synthesizer close error:', e);
+        }
+        avatarSynthesizer = null;
     }
     
     cleanup();
+    
+    // Wait a moment for connections to fully close
+    console.log('Waiting for cleanup...');
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    console.log('Cleanup complete, ready to start new avatar');
 }
 
 function cleanup() {
+    // Close peer connection
     if (peerConnection) {
-        peerConnection.close();
+        try {
+            // Close all tracks
+            peerConnection.getSenders().forEach(sender => {
+                if (sender.track) sender.track.stop();
+            });
+            peerConnection.getReceivers().forEach(receiver => {
+                if (receiver.track) receiver.track.stop();
+            });
+            peerConnection.close();
+        } catch (e) {
+            console.log('Peer connection cleanup error:', e);
+        }
         peerConnection = null;
     }
     
@@ -371,11 +402,19 @@ function cleanup() {
     isListening = false;
     isContinuousMode = false;
 
-    elements.videoPlayer.srcObject = null;
+    // Reset video/audio elements
+    if (elements.videoPlayer.srcObject) {
+        elements.videoPlayer.srcObject.getTracks().forEach(track => track.stop());
+        elements.videoPlayer.srcObject = null;
+    }
     elements.videoPlayer.classList.remove('active');
-    elements.audioPlayer.srcObject = null;
+    
+    if (elements.audioPlayer.srcObject) {
+        elements.audioPlayer.srcObject.getTracks().forEach(track => track.stop());
+        elements.audioPlayer.srcObject = null;
+    }
+    
     elements.placeholder.style.display = 'flex';
-
     elements.startButton.disabled = false;
     elements.stopButton.disabled = true;
     enableVoiceControls(false);
