@@ -46,18 +46,18 @@ const elements = {
     clearHistoryBtn: document.getElementById('clearHistoryBtn'),
     
     // Status
-    avatarStatus: document.getElementById('avatarStatus'),
-    avatarStatusText: document.getElementById('avatarStatusText'),
-    micStatus: document.getElementById('micStatus'),
-    micStatusText: document.getElementById('micStatusText'),
-    conversationIndicator: document.getElementById('conversationIndicator'),
-    indicatorText: document.getElementById('indicatorText'),
-    listeningWaves: document.getElementById('listeningWaves'),
+    connectionStatus: document.getElementById('connectionStatus'),
+    statusLabel: document.getElementById('statusLabel'),
     voiceHint: document.getElementById('voiceHint'),
     
     // History
     conversationLog: document.getElementById('conversationLog'),
-    configSection: document.getElementById('configSection')
+    
+    // Settings Modal
+    settingsToggle: document.getElementById('settingsToggle'),
+    settingsModal: document.getElementById('settingsModal'),
+    closeSettings: document.getElementById('closeSettings'),
+    saveSettings: document.getElementById('saveSettings')
 };
 
 // ============================================
@@ -77,6 +77,22 @@ elements.textInput.addEventListener('keypress', (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
         sendTextMessage();
+    }
+});
+
+// Settings Modal
+elements.settingsToggle.addEventListener('click', () => {
+    elements.settingsModal.classList.add('open');
+});
+elements.closeSettings.addEventListener('click', () => {
+    elements.settingsModal.classList.remove('open');
+});
+elements.saveSettings.addEventListener('click', () => {
+    elements.settingsModal.classList.remove('open');
+});
+elements.settingsModal.addEventListener('click', (e) => {
+    if (e.target === elements.settingsModal) {
+        elements.settingsModal.classList.remove('open');
     }
 });
 
@@ -101,24 +117,18 @@ document.addEventListener('keyup', (e) => {
 // ============================================
 // Status Updates
 // ============================================
-function setAvatarStatus(status, message) {
-    elements.avatarStatus.className = 'status-indicator ' + status;
-    elements.avatarStatusText.textContent = 'Avatar: ' + message;
+function setConnectionStatus(status, message) {
+    if (elements.connectionStatus) {
+        elements.connectionStatus.className = 'connection-status ' + status;
+    }
+    if (elements.statusLabel) {
+        elements.statusLabel.textContent = message;
+    }
 }
 
-function setMicStatus(status, message) {
-    elements.micStatus.className = 'status-indicator ' + status;
-    elements.micStatusText.textContent = 'Mic: ' + message;
-}
-
-function setConversationIndicator(state, text) {
-    elements.indicatorText.textContent = text;
-    elements.conversationIndicator.className = 'conversation-indicator ' + state;
-    
-    if (state === 'listening') {
-        elements.listeningWaves.classList.add('active');
-    } else {
-        elements.listeningWaves.classList.remove('active');
+function setVoiceHint(text) {
+    if (elements.voiceHint) {
+        elements.voiceHint.textContent = text;
     }
 }
 
@@ -199,7 +209,7 @@ async function startAvatar() {
     }
 
     try {
-        setAvatarStatus('connecting', 'Connecting...');
+        setConnectionStatus('connecting', 'Connecting...');
         elements.startButton.disabled = true;
         elements.configSection.open = false;
 
@@ -250,18 +260,17 @@ async function startAvatar() {
             
             switch (peerConnection.connectionState) {
                 case 'connected':
-                    setAvatarStatus('connected', 'Connected');
+                    setConnectionStatus('connected', 'Connected');
                     enableVoiceControls(true);
-                    setConversationIndicator('ready', 'Ready to chat');
-                    elements.voiceHint.textContent = 'Hold the button or press spacebar to talk';
+                    setVoiceHint('Hold button or spacebar to talk');
                     break;
                 case 'disconnected':
                 case 'failed':
-                    setAvatarStatus('error', 'Disconnected');
+                    setConnectionStatus('error', 'Disconnected');
                     cleanup();
                     break;
                 case 'closed':
-                    setAvatarStatus('', 'Disconnected');
+                    setConnectionStatus('', 'Disconnected');
                     cleanup();
                     break;
             }
@@ -286,7 +295,7 @@ async function startAvatar() {
 
     } catch (error) {
         console.error('Error starting avatar:', error);
-        setAvatarStatus('error', 'Error');
+        setConnectionStatus('error', 'Error');
         alert('Failed to start avatar: ' + error.message);
         cleanup();
     }
@@ -334,10 +343,8 @@ function cleanup() {
     elements.stopButton.disabled = true;
     enableVoiceControls(false);
     
-    setAvatarStatus('', 'Disconnected');
-    setMicStatus('', 'Off');
-    setConversationIndicator('', 'Ready');
-    elements.voiceHint.textContent = 'Start the avatar first, then use voice controls';
+    setConnectionStatus('', 'Disconnected');
+    setVoiceHint('Start the avatar first');
 }
 
 function enableVoiceControls(enabled) {
@@ -374,8 +381,7 @@ function startPushToTalk() {
     pendingRecognitionText = '';
     elements.pushToTalkBtn.classList.add('active');
     elements.pushToTalkBtn.querySelector('.btn-label').textContent = 'Release to Send';
-    setMicStatus('connected', 'Listening...');
-    setConversationIndicator('listening', 'Listening... (release when done)');
+    setVoiceHint('🎤 Listening... release when done');
     
     speechRecognizer = createSpeechRecognizer();
     
@@ -384,7 +390,7 @@ function startPushToTalk() {
         if (e.result.text) {
             console.log('Recognizing:', e.result.text);
             pendingRecognitionText = e.result.text;
-            setConversationIndicator('listening', e.result.text);
+            setVoiceHint('🎤 ' + e.result.text);
         }
     };
     
@@ -424,7 +430,7 @@ function stopPushToTalk() {
 function finishPushToTalk() {
     if (!isPushToTalkActive || !speechRecognizer) return;
     
-    setConversationIndicator('thinking', 'Processing...');
+    setVoiceHint('⏳ Processing...');
     
     // Stop recognition and wait a moment for final results
     speechRecognizer.stopContinuousRecognitionAsync(
@@ -444,8 +450,8 @@ function finishPushToTalk() {
                     handleUserInput(finalText);
                 } else {
                     console.log('No speech detected');
-                    setConversationIndicator('ready', 'No speech detected. Try again.');
-                    setTimeout(() => setConversationIndicator('ready', 'Ready'), 2000);
+                    setVoiceHint('No speech detected. Try again.');
+                    setTimeout(() => setVoiceHint('Hold button or spacebar to talk'), 2000);
                 }
             }, 300);
         },
@@ -461,9 +467,8 @@ function resetPushToTalk() {
     pendingRecognitionText = '';
     elements.pushToTalkBtn.classList.remove('active');
     elements.pushToTalkBtn.querySelector('.btn-label').textContent = 'Hold to Talk';
-    setMicStatus('', 'Off');
     if (!isAvatarSpeaking) {
-        setConversationIndicator('ready', 'Ready');
+        setVoiceHint('Hold button or spacebar to talk');
     }
 }
 
@@ -489,14 +494,13 @@ function toggleContinuousMode() {
 function startContinuousListening() {
     if (!avatarSynthesizer || isAvatarSpeaking) return;
     
-    setMicStatus('connected', 'Listening...');
-    setConversationIndicator('listening', 'Listening...');
+    setVoiceHint('🎤 Listening continuously...');
     
     speechRecognizer = createSpeechRecognizer();
     
     speechRecognizer.recognizing = (s, e) => {
         if (!isAvatarSpeaking) {
-            setConversationIndicator('listening', e.result.text || 'Listening...');
+            setVoiceHint('🎤 ' + (e.result.text || 'Listening...'));
         }
     };
     
@@ -529,8 +533,7 @@ function stopContinuousListening() {
             () => {
                 speechRecognizer.close();
                 speechRecognizer = null;
-                setMicStatus('', 'Off');
-                setConversationIndicator('ready', 'Ready');
+                setVoiceHint('Hold button or spacebar to talk');
             },
             (err) => console.error('Stop error:', err)
         );
@@ -560,7 +563,7 @@ async function handleUserInput(userMessage) {
         speechRecognizer.stopContinuousRecognitionAsync();
     }
     
-    setConversationIndicator('thinking', 'Thinking...');
+    setVoiceHint('🤔 Thinking...');
     
     try {
         // Get AI response
@@ -574,7 +577,7 @@ async function handleUserInput(userMessage) {
         
     } catch (error) {
         console.error('Error handling input:', error);
-        setConversationIndicator('error', 'Error occurred');
+        setVoiceHint('❌ Error occurred');
         alert('Error: ' + error.message);
     }
     
@@ -582,7 +585,7 @@ async function handleUserInput(userMessage) {
     if (isContinuousMode) {
         setTimeout(() => startContinuousListening(), 500);
     } else {
-        setConversationIndicator('ready', 'Ready');
+        setVoiceHint('Hold button or spacebar to talk');
     }
 }
 
@@ -644,7 +647,7 @@ async function speakWithAvatar(text) {
     if (!avatarSynthesizer) return;
     
     isAvatarSpeaking = true;
-    setConversationIndicator('speaking', 'Speaking...');
+    setVoiceHint('🗣️ Speaking...');
     
     try {
         const result = await avatarSynthesizer.speakTextAsync(text);
