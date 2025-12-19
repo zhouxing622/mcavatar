@@ -100,17 +100,7 @@ elements.settingsModal.addEventListener('click', (e) => {
     }
 });
 
-// Auto-adjust style when character changes (technical-sitting only works with Lisa)
-elements.avatarCharacter.addEventListener('change', () => {
-    const character = elements.avatarCharacter.value;
-    const style = elements.avatarStyle.value;
-    
-    // If not Lisa and technical-sitting is selected, switch to casual-sitting
-    if (character !== 'lisa' && style === 'technical-sitting') {
-        elements.avatarStyle.value = 'casual-sitting';
-        alert('Technical Sitting is only available for Lisa. Switched to Casual Sitting.');
-    }
-});
+// Avatar is fixed to Lisa + Casual Sitting (only working combination)
 
 // Spacebar shortcut for push-to-talk
 document.addEventListener('keydown', (e) => {

@@ -550,6 +550,29 @@ body {
     border-radius: var(--radius-sm);
 }
 
+.avatar-preview {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 16px;
+}
+
+.avatar-badge,
+.avatar-style-badge {
+    padding: 10px 16px;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--text-primary);
+}
+
+.avatar-badge {
+    background: linear-gradient(135deg, var(--accent-purple) 0%, #7c3aed 100%);
+    border: none;
+    color: white;
+}
+
 .form-group {
     margin-bottom: 12px;
 }
